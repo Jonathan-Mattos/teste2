@@ -3,227 +3,294 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulado Dinâmico - Banco de Dados</title>
+    <title>Portal de Simulados - Firjan Senai</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
-            --primary-green: #36a832;
-            --external-bg: #17319b; 
+            --primary-blue: #17319b;
+            --dark-blue: #0d1b5a;
+            --accent-blue: #15b3d9;
             --white: #ffffff;
-            --text-main: #2d3436;
             --correct-green: #27ae60;
             --wrong-red: #d63031;
-            --timer-red: #e62222;
+            --gray: #f4f7f6;
         }
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--external-bg);
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-            padding: 40px 20px;
-            box-sizing: border-box;
+            background-color: var(--primary-blue);
+            margin: 0; display: flex; height: 100vh; overflow: hidden;
+            user-select: none; /* Impede seleção de texto para dificultar cópia */
         }
 
-        .container {
-            background-color: var(--white);
-            max-width: 800px;
-            width: 100%;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            padding: 30px;
-            position: relative;
-            min-height: 400px;
+        /* --- MENU LATERAL (SIDEBAR) --- */
+        .sidebar {
+            width: 300px; background: var(--dark-blue); color: white;
+            display: flex; flex-direction: column; border-right: 1px solid rgba(255,255,255,0.1);
         }
 
-        .header-title { color: white; text-align: center; margin-bottom: 25px; text-transform: uppercase; }
+        .sidebar-header { padding: 30px 20px; text-align: center; background: rgba(0,0,0,0.2); }
+        .sidebar-header h2 { font-size: 1.2rem; margin: 0; letter-spacing: 1px; }
 
-        .timer-box {
-            position: absolute;
-            top: 20px;
-            right: 30px;
-            background: #f8f9fa;
-            padding: 10px 20px;
-            border-radius: 8px;
-            color: var(--timer-red);
-            font-weight: bold;
-            font-size: 1.2rem;
+        .menu-container { flex-grow: 1; overflow-y: auto; padding: 15px; }
+
+        .category-item { margin-bottom: 10px; }
+        .category-btn {
+            width: 100%; padding: 12px 15px; background: none; border: none;
+            color: white; text-align: left; font-weight: bold; cursor: pointer;
+            display: flex; justify-content: space-between; align-items: center;
+            border-radius: 6px; transition: 0.3s;
+        }
+        .category-btn:hover { background: rgba(255,255,255,0.1); }
+
+        .subcategory-list { display: none; padding-left: 15px; margin-top: 5px; }
+        .subcategory-list.active { display: block; }
+
+        .simulado-link {
+            display: block; color: #adb5bd; text-decoration: none; padding: 10px;
+            font-size: 0.9rem; border-radius: 4px; transition: 0.2s;
+        }
+        .simulado-link:hover { color: white; background: var(--primary-blue); }
+
+        /* --- ÁREA DO CONTEÚDO --- */
+        .main-content {
+            flex-grow: 1; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; padding: 20px; overflow-y: auto;
         }
 
-        .progress-container { width: 100%; height: 10px; background: #eee; border-radius: 5px; margin: 20px 0; overflow: hidden; }
-        .progress-bar { height: 100%; background: var(--primary-green); width: 0%; transition: width 0.3s ease; }
+        .quiz-container {
+            background: var(--white); width: 100%; max-width: 900px;
+            min-height: 500px; border-radius: 12px; padding: 40px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.4); position: relative;
+        }
 
-        .question-text { font-size: 1.2rem; color: var(--text-main); margin-bottom: 25px; font-weight: 600; line-height: 1.4; }
+        /* Elementos Internos */
+        .timer-badge {
+            position: absolute; top: 20px; right: 30px;
+            background: #eee; padding: 8px 15px; border-radius: 20px;
+            font-weight: bold; color: var(--wrong-red);
+        }
 
-        .options-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+        .question-text { font-size: 1.3rem; font-weight: 600; color: #333; margin-bottom: 25px; line-height: 1.4; }
+
         .option-card {
-            padding: 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: 0.2s;
+            padding: 15px; border: 2px solid #e0e0e0; border-radius: 8px;
+            margin-bottom: 12px; cursor: pointer; transition: 0.2s;
         }
-        .option-card:hover { border-color: var(--primary-green); background: #f0fff0; }
-        .option-card.selected { background: var(--primary-green); color: white; border-color: var(--primary-green); }
+        .option-card:hover { border-color: var(--primary-blue); background: #f0f4ff; }
+        .option-card.selected { border-color: var(--primary-blue); background: #e0e7ff; font-weight: bold; }
 
-        .nav-buttons { display: flex; justify-content: space-between; margin-top: 30px; }
-        button { padding: 12px 25px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
-        .btn-next { background: var(--primary-green); color: white; }
-        .btn-prev { background: #636e72; color: white; }
+        .btn-action {
+            padding: 12px 30px; border: none; border-radius: 6px;
+            font-weight: bold; cursor: pointer; background: var(--correct-green); color: white;
+        }
 
-        #result-screen { display: none; text-align: center; }
-        .review-item { text-align: left; background: #f9f9f9; padding: 15px; margin-bottom: 15px; border-radius: 8px; }
-        .explanation-box { background: #e8f5e9; padding: 10px; border-left: 4px solid var(--primary-green); margin-top: 10px; font-style: italic; }
-        
-        /* Loading spinner */
-        .loader { border: 5px solid #f3f3f3; border-top: 5px solid var(--primary-green); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 50px auto; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #welcome-msg { text-align: center; color: white; }
+
+        /* Review */
+        .review-box { margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; }
     </style>
 </head>
-<body>
+<body oncontextmenu="return false;"> <div class="sidebar">
+        <div class="sidebar-header">
+            <h2>PORTAL SENAI</h2>
+            <p style="font-size: 0.8rem; opacity: 0.7;">Simulados de Avaliação</p>
+        </div>
+        
+        <div class="menu-container">
+            <div class="category-item">
+                <button class="category-btn" onclick="toggleMenu('ti-menu')">TI & DESENVOLVIMENTO <span>▼</span></button>
+                <div id="ti-menu" class="subcategory-list">
+                    <a href="#" class="simulado-link" onclick="setupSimulado('SEU_LINK_BANCO_DADOS_AQUI', 'Banco de Dados')">Banco de Dados</a>
+                    <a href="#" class="simulado-link" onclick="setupSimulado('OUTRO_LINK_CSV', 'Programação Web')">Programação Web</a>
+                </div>
+            </div>
 
-    <h1 class="header-title">Simulado SAEP - Gestão de Dados</h1>
-
-    <div class="container">
-        <div id="loading"><div class="loader"></div><p style="text-align:center">Carregando questões da planilha...</p></div>
-
-        <div id="quiz-content" style="display:none;">
-            <div class="timer-box">⏳ <span id="timer">02:00:00</span></div>
-            <div class="progress-container"><div class="progress-bar" id="progressBar"></div></div>
-            <div id="questionNumber" style="font-weight: bold; color: #666; margin-bottom: 10px;"></div>
-            <div class="question-text" id="questionText"></div>
-            <div class="options-grid" id="optionsGrid"></div>
-
-            <div class="nav-buttons">
-                <button class="btn-prev" onclick="prevQuestion()" id="prevBtn">Anterior</button>
-                <button class="btn-next" onclick="nextQuestion()" id="nextBtn">Próxima</button>
-                <button class="btn-next" onclick="finishQuiz()" id="finishBtn" style="display:none; background: #2d3436;">Finalizar Simulado</button>
+            <div class="category-item">
+                <button class="category-btn" onclick="toggleMenu('gestao-menu')">GESTÃO E LOGÍSTICA <span>▼</span></button>
+                <div id="gestao-menu" class="subcategory-list">
+                    <a href="#" class="simulado-link" onclick="setupSimulado('LINK_GESTAO', 'Gestão Industrial')">Gestão Industrial</a>
+                </div>
             </div>
         </div>
+    </div>
 
-        <div id="result-screen">
-            <h2>Resultado do Simulado</h2>
-            <canvas id="scoreChart" style="max-width: 250px; margin: 0 auto;"></canvas>
-            <h3 id="finalScore" style="margin-top:20px;"></h3>
-            <div id="performanceMessage" style="font-size: 1.1rem; margin-bottom: 20px;"></div>
-            <button class="btn-next" onclick="location.reload()">Refazer Simulado</button>
-            <div id="reviewArea" style="margin-top: 30px; border-top: 1px solid #ddd; padding-top: 20px;"></div>
+    <div class="main-content">
+        <div id="welcome-msg">
+            <h1>Bem-vindo ao Portal de Simulados</h1>
+            <p>Selecione uma disciplina no menu lateral para começar.</p>
+        </div>
+
+        <div class="quiz-container" id="quiz-ui" style="display: none;">
+            <div class="timer-badge">⏳ <span id="timer">00:00:00</span></div>
+            <h2 id="current-title" style="color: var(--primary-blue); margin-top: 0;"></h2>
+            
+            <div id="loading-status" style="display:none;">Carregando questões...</div>
+
+            <div id="quiz-core">
+                <div id="questionNumber" style="color: #888; margin-bottom: 10px;"></div>
+                <div class="question-text" id="questionText"></div>
+                <div id="optionsGrid"></div>
+
+                <div style="margin-top: 30px; display: flex; justify-content: space-between;">
+                    <button class="btn-action" style="background:#666" onclick="prevQ()">Anterior</button>
+                    <button class="btn-action" id="next-btn" onclick="nextQ()">Próxima</button>
+                    <button class="btn-action" id="finish-btn" style="display:none; background: var(--dark-blue);" onclick="finishQuiz()">Finalizar Teste</button>
+                </div>
+            </div>
+
+            <div id="result-screen" style="display:none; text-align: center;">
+                <h2>Resultado Final</h2>
+                <canvas id="scoreChart" style="max-height: 250px; margin: 0 auto;"></canvas>
+                <h3 id="score-text"></h3>
+                <div id="feedback-msg"></div>
+                <div id="review-area" style="text-align: left; margin-top: 30px;"></div>
+            </div>
         </div>
     </div>
 
     <script>
-        // === CONFIGURAÇÃO: COLE O LINK DO SEU CSV PUBLICADO ABAIXO ===
-        const sheetUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT9XNps8c6jUHWhOzqpRnTD-rkdMI9Y-ZE11sk-OQrGmUtOOhjBFxuAT-z2zduB47CXd7tvn3DcmJyJ/pub?output=csv"; 
+        // --- SEGURANÇA ---
+        const ACESSO = "Firjan2024"; 
+        
+        (function() {
+            const entrada = prompt("Palavra-passe de acesso ao sistema:");
+            if(entrada !== ACESSO) {
+                alert("Acesso negado.");
+                document.body.innerHTML = "";
+                window.stop();
+            }
+        })();
 
+        // Bloqueio F12 e Ctrl+U
+        document.onkeydown = function(e) {
+            if (e.keyCode == 123 || (e.ctrlKey && (e.keyCode == 'U'.charCodeAt(0) || e.keyCode == 'I'.charCodeAt(0)))) {
+                return false;
+            }
+        };
+
+        // --- LÓGICA DO MENU ---
+        function toggleMenu(id) {
+            document.querySelectorAll('.subcategory-list').forEach(m => {
+                if(m.id !== id) m.classList.remove('active');
+            });
+            document.getElementById(id).classList.toggle('active');
+        }
+
+        // --- LÓGICA DO QUIZ ---
         let questions = [];
-        let currentQuestion = 0;
-        let selectedAnswers = [];
-        let timeLeft = 7200; // 2 horas
-        let timerInterval;
+        let currentIdx = 0;
+        let answers = [];
+        let timeLeft = 7200;
+        let timerInt;
 
-        async function fetchQuestions() {
+        async function setupSimulado(url, titulo) {
+            if(!url || url.includes('https://docs.google.com/spreadsheets/d/e/2PACX-1vT9XNps8c6jUHWhOzqpRnTD-rkdMI9Y-ZE11sk-OQrGmUtOOhjBFxuAT-z2zduB47CXd7tvn3DcmJyJ/pub?output=csv')) return alert("Link da planilha não configurado para este simulado.");
+            
+            clearInterval(timerInt);
+            document.getElementById('welcome-msg').style.display = 'none';
+            document.getElementById('quiz-ui').style.display = 'block';
+            document.getElementById('quiz-core').style.display = 'none';
+            document.getElementById('result-screen').style.display = 'none';
+            document.getElementById('loading-status').style.display = 'block';
+            document.getElementById('current-title').innerText = titulo;
+
             try {
-                const response = await fetch(sheetUrl);
-                const csvData = await response.text();
+                const res = await fetch(url);
+                const csv = await res.text();
+                const rows = csv.split(/\r?\n/).filter(r => r.trim() !== "");
                 
-                // Parse CSV simples (lidando com aspas)
-                const rows = csvData.split(/\r?\n/).slice(1); 
-                questions = rows.map(row => {
-                    const parts = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
-                    if (!parts || parts.length < 7) return null;
+                questions = rows.slice(1).map(row => {
+                    const cols = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
                     return {
-                        q: parts[0].replace(/"/g, ""),
-                        options: [parts[1], parts[2], parts[3], parts[4]].map(o => o.replace(/"/g, "")),
-                        correct: parseInt(parts[5].replace(/"/g, "")),
-                        exp: parts[6].replace(/"/g, "")
+                        q: cols[0].replace(/"/g, ""),
+                        options: [cols[1], cols[2], cols[3], cols[4]].map(o => o.replace(/"/g, "")),
+                        correct: parseInt(cols[5].replace(/"/g, "")),
+                        exp: cols[6] ? cols[6].replace(/"/g, "") : ""
                     };
-                }).filter(q => q !== null);
+                });
 
-                selectedAnswers = new Array(questions.length).fill(null);
-                document.getElementById("loading").style.display = "none";
-                document.getElementById("quiz-content").style.display = "block";
+                answers = new Array(questions.length).fill(null);
+                currentIdx = 0;
+                timeLeft = 7200;
                 
+                document.getElementById('loading-status').style.display = 'none';
+                document.getElementById('quiz-core').style.display = 'block';
                 startTimer();
-                loadQuestion();
-            } catch (error) {
-                document.getElementById("loading").innerHTML = "<h3>Erro ao conectar com a planilha.</h3><p>Verifique se o link está correto e se a planilha foi 'Publicada na Web'.</p>";
+                renderQ();
+
+            } catch (e) {
+                alert("Erro ao carregar os dados da disciplina.");
             }
         }
 
-        function startTimer() { timerInterval = setInterval(updateTimer, 1000); }
-
-        function updateTimer() {
-            const h = Math.floor(timeLeft / 3600);
-            const m = Math.floor((timeLeft % 3600) / 60);
-            const s = timeLeft % 60;
-            document.getElementById("timer").innerText = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-            if (timeLeft <= 0) { clearInterval(timerInterval); finishQuiz(); }
-            else timeLeft--;
+        function startTimer() {
+            timerInt = setInterval(() => {
+                const h = Math.floor(timeLeft / 3600);
+                const m = Math.floor((timeLeft % 3600) / 60);
+                const s = timeLeft % 60;
+                document.getElementById('timer').innerText = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+                if(timeLeft <= 0) finishQuiz();
+                timeLeft--;
+            }, 1000);
         }
 
-        function loadQuestion() {
-            const q = questions[currentQuestion];
-            document.getElementById("questionNumber").innerText = `Questão ${currentQuestion + 1} de ${questions.length}`;
-            document.getElementById("questionText").innerText = q.q;
+        function renderQ() {
+            const q = questions[currentIdx];
+            document.getElementById('questionNumber').innerText = `Questão ${currentIdx + 1} de ${questions.length}`;
+            document.getElementById('questionText').innerText = q.q;
             
-            const grid = document.getElementById("optionsGrid");
+            const grid = document.getElementById('optionsGrid');
             grid.innerHTML = "";
             q.options.forEach((opt, i) => {
-                const card = document.createElement("div");
-                card.className = `option-card ${selectedAnswers[currentQuestion] === i ? 'selected' : ''}`;
-                card.innerText = `${String.fromCharCode(65 + i)}) ${opt}`;
-                card.onclick = () => { selectedAnswers[currentQuestion] = i; loadQuestion(); };
-                grid.appendChild(card);
+                const div = document.createElement('div');
+                div.className = `option-card ${answers[currentIdx] === i ? 'selected' : ''}`;
+                div.innerText = `${String.fromCharCode(65+i)}) ${opt}`;
+                div.onclick = () => { answers[currentIdx] = i; renderQ(); };
+                grid.appendChild(div);
             });
 
-            document.getElementById("progressBar").style.width = `${((currentQuestion + 1) / questions.length) * 100}%`;
-            document.getElementById("prevBtn").style.visibility = currentQuestion === 0 ? "hidden" : "visible";
-            document.getElementById("nextBtn").style.display = currentQuestion === questions.length - 1 ? "none" : "block";
-            document.getElementById("finishBtn").style.display = currentQuestion === questions.length - 1 ? "block" : "none";
+            document.getElementById('next-btn').style.display = currentIdx === questions.length - 1 ? 'none' : 'inline-block';
+            document.getElementById('finish-btn').style.display = currentIdx === questions.length - 1 ? 'inline-block' : 'none';
         }
 
-        function nextQuestion() { currentQuestion++; loadQuestion(); }
-        function prevQuestion() { currentQuestion--; loadQuestion(); }
+        function nextQ() { currentIdx++; renderQ(); }
+        function prevQ() { if(currentIdx > 0) { currentIdx--; renderQ(); } }
 
         function finishQuiz() {
-            clearInterval(timerInterval);
+            clearInterval(timerInt);
+            document.getElementById('quiz-core').style.display = 'none';
+            document.getElementById('result-screen').style.display = 'block';
+            
             let score = 0;
             let reviewHtml = "";
-            const total = questions.length;
-            const passScore = Math.ceil(total * 0.8); // 80%
-
             questions.forEach((q, i) => {
-                if (selectedAnswers[i] === q.correct) score++;
+                if(answers[i] === q.correct) score++;
                 else {
-                    reviewHtml += `<div class='review-item'>
-                        <strong>${i+1}.</strong> ${q.q}<br>
-                        <span style="color:var(--wrong-red)">Sua: ${selectedAnswers[i] !== null ? q.options[selectedAnswers[i]] : 'Nula'}</span> | 
-                        <span style="color:var(--correct-green)">Correta: ${q.options[q.correct]}</span>
-                        <div class="explanation-box"><b>Justificativa:</b> ${q.exp}</div></div>`;
+                    reviewHtml += `<div class="review-box">
+                        <strong>${i+1}. ${q.q}</strong><br>
+                        <span style="color:red">Sua: ${answers[i] !== null ? q.options[answers[i]] : 'Em branco'}</span><br>
+                        <span style="color:green">Correta: ${q.options[q.correct]}</span>
+                        <p style="font-size:0.9rem; margin-top:5px; border-top:1px solid #ddd; padding-top:5px;"><i>Explicação: ${q.exp}</i></p>
+                    </div>`;
                 }
             });
 
-            document.getElementById("quiz-content").style.display = "none";
-            document.getElementById("result-screen").style.display = "block";
-            document.getElementById("finalScore").innerText = `Pontuação: ${score} de ${total} (${(score/total*100).toFixed(1)}%)`;
+            const percent = (score / questions.length) * 100;
+            document.getElementById('score-text').innerText = `Acertos: ${score} de ${questions.length} (${percent.toFixed(1)}%)`;
+            document.getElementById('feedback-msg').innerHTML = percent >= 80 ? 
+                `<h2 style="color:green">APROVADO!</h2>` : `<h2 style="color:red">REPROVADO (Mínimo 80%)</h2>`;
             
-            const msg = document.getElementById("performanceMessage");
-            msg.innerHTML = score >= passScore ? `<b style="color:green">APROVADO!</b>` : `<b style="color:red">REPROVADO. Necessário 80% (${passScore} acertos).</b>`;
+            document.getElementById('review-area').innerHTML = "<h4>Revisão de Erros:</h4>" + (reviewHtml || "Excelente! Não houve erros.");
 
             new Chart(document.getElementById('scoreChart'), {
-                type: 'pie',
+                type: 'doughnut',
                 data: {
                     labels: ['Acertos', 'Erros'],
-                    datasets: [{ data: [score, total - score], backgroundColor: ['#27ae60', '#d63031'] }]
+                    datasets: [{ data: [score, questions.length - score], backgroundColor: ['#27ae60', '#d63031'] }]
                 }
             });
-            document.getElementById("reviewArea").innerHTML = "<h3>Revisão das Questões:</h3>" + (reviewHtml || "Gabaritou!");
         }
-
-        fetchQuestions();
     </script>
 </body>
 </html>
